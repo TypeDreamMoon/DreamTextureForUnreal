@@ -1,0 +1,19 @@
+{
+	"FileVersion": 3,
+	"EngineAssociation": "5.8",
+	"Category": "",
+	"Description": "Minimal host project that builds DreamTextureForUnreal on its own and runs its automation tests, isolated from any working project. Generated from Plugins/DreamTextureForUnreal/Tools/TestHost/Template by New-DreamTextureTestHost.ps1; see Tools/TestHost/README.md.",
+	"Modules": [
+		{
+			"Name": "DreamTextureTestHost",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	],
+	"Plugins": [
+		{
+			"Name": "DreamTextureForUnreal",
+			"Enabled": true
+		}
+	]
+}

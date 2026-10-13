@@ -1,0 +1,129 @@
+name: CI
+
+# Light checks only. GitHub-hosted runners have no Unreal Engine, so this workflow does NOT compile the plugin
+# and does NOT run the automation tests. A green run means the descriptor, the changelog and the localization
+# data are consistent -- not that the plugin builds. Build and test with Tools/Test.ps1 (Docs/contributing.md).
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  metadata:
+    name: Descriptor and docs
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check DreamTextureForUnreal.uplugin
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          # ConvertFrom-Json throws on invalid JSON.
+          $Descriptor = Get-Content -Raw -Path 'DreamTextureForUnreal.uplugin' | ConvertFrom-Json
+          $Errors = [System.Collections.Generic.List[string]]::new()
+
+          $VersionName = [string]$Descriptor.VersionName
+          if ($VersionName -notmatch '^\s*[0-9]+\.[0-9]+\.[0-9]+') {
+            $Errors.Add("VersionName '$VersionName' must start with X.Y.Z.")
+          }
+          if (-not ($Descriptor.Version -is [int] -or $Descriptor.Version -is [long]) -or $Descriptor.Version -lt 1) {
+            $Errors.Add("Version must be a positive integer.")
+          }
+          foreach ($Field in 'FriendlyName', 'Description', 'CreatedBy', 'CreatedByURL', 'DocsURL', 'SupportURL', 'EngineVersion') {
+            if ([string]::IsNullOrWhiteSpace([string]$Descriptor.$Field)) { $Errors.Add("$Field is empty.") }
+          }
+
+          # Every declared module has a Source/<Name>/<Name>.Build.cs.
+          foreach ($Module in @($Descriptor.Modules)) {
+            $Build = "Source/$($Module.Name)/$($Module.Name).Build.cs"
+            if (-not (Test-Path -LiteralPath $Build)) { $Errors.Add("Module '$($Module.Name)' has no $Build.") }
+          }
+
+          # The changelog has a section for the version being declared.
+          $Base = ($VersionName -replace '^\s*([0-9]+\.[0-9]+\.[0-9]+).*', '$1')
+          $Changelog = Get-Content -Raw -Path 'CHANGELOG.md'
+          if ($Changelog -notmatch "(?m)^##\s+$([regex]::Escape($Base))\b") {
+            $Errors.Add("CHANGELOG.md has no '## $Base' section.")
+          }
+
+          # Files the README and the release archive rely on.
+          foreach ($File in 'LICENSE', 'README.md', 'README.zh-CN.md', 'Docs/index.md', 'Resources/Icon128.png') {
+            if (-not (Test-Path -LiteralPath $File)) { $Errors.Add("Missing $File.") }
+          }
+
+          if ($Errors.Count -gt 0) {
+            foreach ($E in $Errors) { Write-Output "::error::$E" }
+            throw "$($Errors.Count) descriptor / docs problem(s)."
+          }
+          Write-Host "OK: $VersionName (Version $($Descriptor.Version), beta=$($Descriptor.IsBetaVersion))"
+
+      - name: Check relative links in Markdown
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $Bad = [System.Collections.Generic.List[string]]::new()
+          $Files = @(Get-ChildItem -Recurse -File -Include *.md -Path README.md, README.zh-CN.md, CHANGELOG.md, Docs)
+          foreach ($File in $Files) {
+            $Text = Get-Content -Raw -LiteralPath $File.FullName
+            foreach ($M in [regex]::Matches($Text, '\]\((?!https?:|#|mailto:)([^)\s#]+)(#[^)\s]*)?\)')) {
+              $Target = $M.Groups[1].Value
+              $Path = Join-Path $File.DirectoryName $Target
+              # Screenshots are added by the maintainer later; do not fail on them.
+              if ($Target -like '*Images/*' -or $Target -like './Images/*') { continue }
+              if (-not (Test-Path -LiteralPath $Path)) { $Bad.Add("$($File.Name): $Target") }
+            }
+          }
+          if ($Bad.Count -gt 0) {
+            foreach ($B in $Bad) { Write-Output "::error::Broken link: $B" }
+            throw "$($Bad.Count) broken relative link(s)."
+          }
+          Write-Host "OK: $($Files.Count) Markdown files checked."
+
+  localization:
+    name: Localization data
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # The scripts are described in Tools/Localization/README.md. None of this needs the Unreal Editor, and
+      # nothing here writes files. The same three commands run locally as: Tools/Test.ps1 -LintOnly
+
+      # The toolchain's own tests: C escape decoding, string hashes, LocRes/LocMeta layout, placeholder parsing.
+      - name: Localization toolchain self-test
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          python Tools/Localization/selftest.py
+          if ($LASTEXITCODE -ne 0) { throw "selftest.py failed ($LASTEXITCODE)." }
+
+      # No Chinese string literals in non-test source (UE_LOG and assertions included), LOCTEXT arguments are
+      # plain literals, namespaces and keys are consistent. Exemptions need a reason (lint_exemptions.json).
+      - name: Localization lint
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          pwsh -NoProfile -File Tools/Localization/localization_lint.ps1
+          if ($LASTEXITCODE -ne 0) { throw "localization_lint.ps1 failed ($LASTEXITCODE)." }
+
+      # loctext.json matches the source, every entry has a zh-Hans translation (or is registered language-neutral),
+      # placeholders agree, no orphan or duplicate translations, and the committed .locres/.locmeta are exactly what
+      # the scripts generate. A missing translation fails this step.
+      - name: Localization data is complete and in sync
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          python Tools/Localization/sync_loctext.py --check
+          if ($LASTEXITCODE -ne 0) { throw "sync_loctext.py --check failed ($LASTEXITCODE): add the missing translations, then run sync_loctext.py and build_locres.py and commit the result." }

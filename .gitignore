@@ -1,0 +1,26 @@
+# UE 构建产物
+Binaries/
+Intermediate/
+Saved/
+DerivedDataCache/
+Build/
+
+# IDE
+.vs/
+.idea/
+*.sln
+*.suo
+*.user
+*.VC.db
+*.opendb
+
+# 系统
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# 本机私有：约定与笔记只留在本地，不进公开仓库
+/CLAUDE.md
+
+# 本机私有：脚本里的路径设置（模板见 Tools/LocalSettings.example.psd1）
+/Tools/LocalSettings.psd1

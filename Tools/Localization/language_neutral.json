@@ -1,0 +1,17 @@
+{
+ "DreamTextureConnectionStrip|BackendOkOriginTip": "只用换行把两段已经本地化的文字接起来，自己没有词。",
+ "DreamTextureConnectionStrip|TitleComfy": "产品名 ComfyUI，中文界面里也写原名。",
+ "DreamTextureEditor|MenuSection": "产品名 DreamTexture，中文界面里也写原名。",
+ "DreamTextureEditor|PanelTabTitle": "产品名 DreamTexture，中文界面里也写原名。",
+ "DreamTextureGeneratePanel|OfflineHintBlocked": "只用换行把两段已经本地化的文字接起来，自己没有词。",
+ "DreamTextureImportNotifier|ImportDoneWithLicense": "只用换行把两段已经本地化的文字接起来，自己没有词。",
+ "DreamTextureImportNotifier|ImportDoneWithMI": "只用换行把两段已经本地化的文字接起来，自己没有词。",
+ "DreamTextureLibraryPanel|ResolutionFmt": "分辨率写法 {0}×{0}，只有占位符和乘号。",
+ "DreamTextureReflowModel|ChannelAO": "通道缩写 AO，与材质里的参数名一致，中文界面里也写缩写。",
+ "DreamTextureReflowPanel|CandidateLabel": "候选项标签 [序号] 名称，只有占位符和方括号。",
+ "DreamTextureReflowPanel|SizeText": "尺寸写法 {0}×{1}，只有占位符和乘号。",
+ "DreamTextureReflowPanel|TipSrgb": "技术名词 sRGB，中文界面里也写原名。",
+ "DreamTextureReflowRun|GeneratingPercent": "只有占位符和百分号：{0} 是阶段名（已本地化），{1} 是进度。",
+ "DreamTextureStatusPanel|RowComfy": "产品名 ComfyUI，中文界面里也写原名。",
+ "UObjectDisplayNames|DreamTextureSettings": "产品名 DreamTexture（项目设置里这一栏的标题），中文界面里也写原名。"
+}

@@ -1,0 +1,64 @@
+{
+ "exemptions": [
+  {
+   "rule": "R1",
+   "file": "Source/DreamTextureEditor/Private/DreamTextureGenerateModel.cpp",
+   "contains": "。",
+   "reason": "后端的失败原因（Go 错误文本，可能是中文句子）末尾的句号要先去掉再接我们自己的句子；这是在处理后端原文，不是显示给人的字面量。"
+  },
+  {
+   "rule": "R1",
+   "file": "Source/DreamTextureEditor/Private/DreamTextureGenerateModel.cpp",
+   "contains": "；",
+   "reason": "同上：去掉后端原因末尾的中文分号。"
+  },
+  {
+   "rule": "R1",
+   "file": "Source/DreamTextureEditor/Private/DreamTextureGenerateModel.cpp",
+   "contains": "等待 ComfyUI",
+   "reason": "后端（internal/job）把任务阶段名写成这句中文放进 job.stage，插件要与它逐字比较才知道这个阶段没有采样进度；契约在后端，不是显示文字（显示时原样透传后端的阶段名）。"
+  },
+  {
+   "rule": "R1",
+   "file": "Source/DreamTextureEditor/Private/DreamTextureGenerateModel.cpp",
+   "contains": "提交中",
+   "reason": "同上：后端的阶段名「提交中」，逐字比较。"
+  },
+  {
+   "rule": "R1",
+   "file": "Source/DreamTextureEditor/Private/DreamTextureReflowRun.cpp",
+   "contains": "。",
+   "reason": "后端或各层给的失败原因末尾的中文句号要先去掉再接我们自己的句子；处理后端原文，不是显示给人的字面量。"
+  },
+  {
+   "rule": "R1",
+   "file": "Source/DreamTextureEditor/Private/DreamTextureReflowRun.cpp",
+   "contains": "；",
+   "reason": "同上：去掉失败原因末尾的中文分号。"
+  },
+  {
+   "rule": "R1",
+   "file": "Source/DreamTextureEditor/Private/DreamTextureReflowRun.cpp",
+   "contains": "上传失败：",
+   "reason": "旧版后端 / 旧版本插件给的失败原因自带这个中文前缀，匹配上才去掉，免得与「在「上传」这一步失败」叠成两遍；比对的是别人写的原文。"
+  },
+  {
+   "rule": "R1",
+   "file": "Source/DreamTextureEditor/Private/DreamTextureReflowRun.cpp",
+   "contains": "提交失败：",
+   "reason": "同上：旧前缀「提交失败：」。"
+  },
+  {
+   "rule": "R1",
+   "file": "Source/DreamTextureEditor/Private/DreamTextureReflowRun.cpp",
+   "contains": "等待 ComfyUI",
+   "reason": "后端把任务阶段名写成这句中文，要逐字比较才知道没有采样进度；不是显示文字。"
+  },
+  {
+   "rule": "R1",
+   "file": "Source/DreamTextureEditor/Private/DreamTextureReflowRun.cpp",
+   "contains": "提交中",
+   "reason": "同上：后端的阶段名「提交中」，逐字比较。"
+  }
+ ]
+}

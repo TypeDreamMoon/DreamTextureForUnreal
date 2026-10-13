@@ -1,0 +1,6 @@
+{
+ "DreamTextureLocalizationTest|Concat": "第一段很长的说明，第二段，第三段。",
+ "DreamTextureLocalizationTest|Escapes": "制表符\t引号\"带引号\"反斜杠\\圆点 · AB A 😀 表情",
+ "DreamTextureLocalizationTest|Explicit": "显式命名空间，参数 {0}",
+ "DreamTextureLocalizationTest|Plural": "{0} 个文件"
+}

@@ -1,0 +1,16 @@
+* text=auto eol=lf
+
+*.cpp   text eol=lf
+*.h     text eol=lf
+*.cs    text eol=lf
+*.uplugin text eol=lf
+*.md    text eol=lf
+
+*.uasset binary
+*.umap   binary
+*.png    binary
+
+# 本地化产物（Tools/Localization/build_locres.py 生成）。里面有 NUL 字节，git 的自动判断多半也认得出是二进制，
+# 但换行转换一旦误伤就是静默坏掉（引擎只会悄悄丢掉译文），所以明说。
+*.locres  binary
+*.locmeta binary

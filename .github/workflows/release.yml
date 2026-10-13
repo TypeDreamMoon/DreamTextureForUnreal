@@ -1,0 +1,293 @@
+name: Release
+
+# GitHub-hosted runners have no Unreal Engine, so nothing is compiled here. The archive is the plugin SOURCE;
+# the editor builds it when the plugin is first opened. Build and test with Tools/Test.ps1 before tagging
+# (see Docs/contributing.md).
+
+on:
+  push:
+    tags:
+      - "v*.*.*" # stable, e.g. v1.0.0
+      - "v*.*.*b" # beta,   e.g. v0.9.0b
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version. Leave empty to use DreamTextureForUnreal.uplugin VersionName."
+        required: false
+        type: string
+      prerelease:
+        description: "Force the GitHub Release to be a pre-release (beta versions are pre-release automatically)."
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Package and publish
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve release version
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $Descriptor = Get-Content -Raw -Path 'DreamTextureForUnreal.uplugin' | ConvertFrom-Json
+          $VersionName = [string]$Descriptor.VersionName
+          if ([string]::IsNullOrWhiteSpace($VersionName)) {
+            throw 'DreamTextureForUnreal.uplugin VersionName is empty.'
+          }
+
+          # Base X.Y.Z from the (possibly decorated) VersionName -- "0.9.0 - Beta" => "0.9.0".
+          if ($VersionName -notmatch '^\s*([0-9]+\.[0-9]+\.[0-9]+)') {
+            throw "DreamTextureForUnreal.uplugin VersionName '$VersionName' must start with an X.Y.Z version."
+          }
+          $BaseVersion = $Matches[1]
+
+          # Beta when the descriptor flags it or the VersionName is decorated with 'beta'.
+          $IsBeta = ([bool]$Descriptor.IsBetaVersion) -or ($VersionName -match '(?i)beta')
+
+          # Tag / filename slug: base version, plus a 'b' suffix for beta (0.9.0 / 0.9.0b).
+          $Slug = if ($IsBeta) { "${BaseVersion}b" } else { $BaseVersion }
+          $TagName = "v$Slug"
+
+          if ('${{ github.ref_type }}' -eq 'tag') {
+            $PushedTag = '${{ github.ref_name }}'
+            if ($PushedTag -ne $TagName) {
+              throw "Pushed tag '$PushedTag' does not match the tag derived from DreamTextureForUnreal.uplugin ('$TagName'). Fix VersionName / IsBetaVersion, or retag."
+            }
+          }
+          else {
+            $InputVersion = '${{ github.event.inputs.version }}'.Trim()
+            if (-not [string]::IsNullOrWhiteSpace($InputVersion)) {
+              $InputSlug = $InputVersion.TrimStart('v')
+              if ($InputSlug -ne $Slug) {
+                throw "Requested version '$InputVersion' does not match DreamTextureForUnreal.uplugin ('$Slug')."
+              }
+            }
+          }
+
+          "DTU_VERSION=$VersionName" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "DTU_BASE=$BaseVersion"    | Out-File -FilePath $env:GITHUB_ENV -Append
+          "DTU_SLUG=$Slug"           | Out-File -FilePath $env:GITHUB_ENV -Append
+          "DTU_TAG=$TagName"         | Out-File -FilePath $env:GITHUB_ENV -Append
+          "DTU_PRERELEASE=$(if ($IsBeta) { 'true' } else { 'false' })" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+          Write-Host "Version:    $VersionName"
+          Write-Host "Base:       $BaseVersion"
+          Write-Host "Tag:        $TagName"
+          Write-Host "Slug:       $Slug"
+          Write-Host "Prerelease: $IsBeta"
+
+      - name: Package plugin
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $Slug = $env:DTU_SLUG
+          $StageRoot = Join-Path $env:RUNNER_TEMP 'DreamTextureForUnrealRelease'
+          $PluginRoot = Join-Path $StageRoot 'DreamTextureForUnreal'
+          $ArtifactRoot = Join-Path $env:GITHUB_WORKSPACE 'artifacts'
+          $ZipPath = Join-Path $ArtifactRoot "DreamTextureForUnreal-$Slug.zip"
+
+          Remove-Item -LiteralPath $StageRoot -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item -LiteralPath $ArtifactRoot -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Path $PluginRoot -Force | Out-Null
+          New-Item -ItemType Directory -Path $ArtifactRoot -Force | Out-Null
+
+          # Tools/ (test host, fixture and pipeline backends) and Tests/ (fixtures) are development
+          # material and stay out of the archive. Content/ carries Localization/DreamTextureForUnreal/ --
+          # the .locmeta and the zh-Hans .locres the descriptor's LocalizationTargets entry loads from
+          # <Plugin>/Content/Localization/ -- and is copied whole, as BuildPlugin copies it.
+          $Items = @(
+            'Source',
+            'Resources',
+            'Config',
+            'Content',
+            'Docs',
+            'Images',
+            'DreamTextureForUnreal.uplugin',
+            'README.md',
+            'README.zh-CN.md',
+            'CHANGELOG.md',
+            'LICENSE'
+          )
+
+          foreach ($Item in $Items) {
+            if (!(Test-Path -LiteralPath $Item)) {
+              # Not fatal -- a release should not fail over a missing optional file -- but visible on
+              # the run summary. A declared localization target is checked strictly below.
+              Write-Output "::warning::Release archive is missing '$Item'; it was not staged."
+              continue
+            }
+
+            Copy-Item -LiteralPath $Item -Destination $PluginRoot -Recurse -Force
+          }
+
+          Compress-Archive -Path $PluginRoot -DestinationPath $ZipPath -Force
+
+          # Read the zip back. Source and the descriptor are not optional, and a localization target the
+          # descriptor declares must have its .locmeta and every culture .locres the repository has.
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $Zip = [System.IO.Compression.ZipFile]::OpenRead($ZipPath)
+          try {
+            $Entries = @($Zip.Entries | ForEach-Object { $_.FullName.Replace('\', '/') })
+          }
+          finally {
+            $Zip.Dispose()
+          }
+
+          $Missing = [System.Collections.Generic.List[string]]::new()
+          foreach ($Required in @(
+              'DreamTextureForUnreal/DreamTextureForUnreal.uplugin',
+              'DreamTextureForUnreal/LICENSE',
+              'DreamTextureForUnreal/Source/DreamTextureClient/DreamTextureClient.Build.cs',
+              'DreamTextureForUnreal/Source/DreamTextureAssets/DreamTextureAssets.Build.cs',
+              'DreamTextureForUnreal/Source/DreamTextureEditor/DreamTextureEditor.Build.cs')) {
+            if ($Entries -notcontains $Required) { $Missing.Add($Required) }
+          }
+
+          $Descriptor = Get-Content -Raw -Path 'DreamTextureForUnreal.uplugin' | ConvertFrom-Json
+          foreach ($Target in @($Descriptor.LocalizationTargets)) {
+            $Name = [string]$Target.Name
+            if ([string]::IsNullOrWhiteSpace($Name)) { continue }
+
+            $Expected = [System.Collections.Generic.List[string]]::new()
+            $Expected.Add("DreamTextureForUnreal/Content/Localization/$Name/$Name.locmeta")
+            $TargetDir = Join-Path 'Content/Localization' $Name
+            if (Test-Path -LiteralPath $TargetDir) {
+              foreach ($Culture in Get-ChildItem -LiteralPath $TargetDir -Directory) {
+                if (Test-Path -LiteralPath (Join-Path $Culture.FullName "$Name.locres")) {
+                  $Expected.Add("DreamTextureForUnreal/Content/Localization/$Name/$($Culture.Name)/$Name.locres")
+                }
+              }
+            }
+
+            foreach ($Path in $Expected) {
+              if ($Entries -notcontains $Path) { $Missing.Add($Path) }
+            }
+          }
+
+          if ($Missing.Count -gt 0) {
+            foreach ($Path in $Missing) { Write-Output "::error::Release archive is missing '$Path'." }
+            throw "Release archive is missing $($Missing.Count) required file(s)."
+          }
+
+          "DTU_ZIP=$ZipPath" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Build release notes
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $Version = $env:DTU_VERSION
+          $Slug = $env:DTU_SLUG
+          $Base = $env:DTU_BASE
+          $Tag = $env:DTU_TAG
+          $IsPrerelease = $env:DTU_PRERELEASE -eq 'true'
+          $NotesPath = Join-Path $env:RUNNER_TEMP 'DreamTextureForUnrealReleaseNotes.md'
+
+          # Pull the section for this version out of the changelog.
+          $Lines = Get-Content -Path 'CHANGELOG.md'
+          $StartIndex = -1
+          for ($Index = 0; $Index -lt $Lines.Count; ++$Index) {
+            if ($Lines[$Index] -match "^##\s+$([regex]::Escape($Version))\b") {
+              $StartIndex = $Index + 1
+              break
+            }
+          }
+
+          if ($StartIndex -ge 0) {
+            $EndIndex = $Lines.Count
+            for ($Index = $StartIndex; $Index -lt $Lines.Count; ++$Index) {
+              if ($Lines[$Index] -match '^##\s+') {
+                $EndIndex = $Index
+                break
+              }
+            }
+            $Body = ($Lines[$StartIndex..($EndIndex - 1)] -join "`n").Trim()
+            # Relative links in the changelog do not resolve on the release page; point them at the tag.
+            $Body = $Body -replace '\]\((Docs/[^)]*)\)', "](https://github.com/TypeDreamMoon/DreamTextureForUnreal/blob/$Tag/`$1)"
+          } else {
+            $Body = "See [CHANGELOG.md](https://github.com/TypeDreamMoon/DreamTextureForUnreal/blob/$Tag/CHANGELOG.md)."
+          }
+
+          $Notes = [System.Collections.Generic.List[string]]::new()
+          if ($IsPrerelease) {
+            $Notes.Add("> :warning: **Beta / pre-release.** Interfaces and the generated asset layout may still change before the stable ``$Base``. Please [report issues](https://github.com/TypeDreamMoon/DreamTextureForUnreal/issues).")
+            $Notes.Add("")
+          }
+          $Notes.Add("### :package: Installation")
+          $Notes.Add("")
+          $Notes.Add("1. Download ``DreamTextureForUnreal-$Slug.zip`` from the assets below.")
+          $Notes.Add("2. Extract the ``DreamTextureForUnreal`` folder into your project's ``Plugins/`` directory.")
+          $Notes.Add("3. Open the project, enable **DreamTexture for Unreal** in *Edit -> Plugins* if needed, and let the editor build it.")
+          $Notes.Add("")
+          $Notes.Add("Unreal Engine 5.8, Windows. The archive is **source only**: the editor compiles it, so a C++ toolchain for UE 5.8 is required. It also needs a running [DreamTexture backend](https://github.com/TypeDreamMoon/DreamTexture) and ComfyUI.")
+          $Notes.Add("")
+          $Notes.Add("### :sparkles: What's changed")
+          $Notes.Add("")
+          $Notes.Add($Body)
+          $Notes.Add("")
+          $Notes.Add("### :inbox_tray: Assets")
+          $Notes.Add("")
+          $Notes.Add("| Asset | Description |")
+          $Notes.Add("| :---- | :---------- |")
+          $Notes.Add("| ``DreamTextureForUnreal-$Slug.zip`` | The Unreal plugin: source, resources, localization, docs, README, CHANGELOG, LICENSE. |")
+          $Notes.Add("")
+          $Notes.Add("### :link: Links")
+          $Notes.Add("")
+          $Notes.Add("- Documentation: https://github.com/TypeDreamMoon/DreamTextureForUnreal/tree/$Tag/Docs")
+          $Notes.Add("- Full changelog: [CHANGELOG.md](https://github.com/TypeDreamMoon/DreamTextureForUnreal/blob/$Tag/CHANGELOG.md)")
+          $Notes.Add("- Backend: https://github.com/TypeDreamMoon/DreamTexture")
+          $Notes.Add("- License: MIT. Materials decomposed with CHORD are research-only and not for commercial use.")
+
+          ($Notes -join "`n") | Set-Content -Path $NotesPath -Encoding UTF8
+          "DTU_NOTES=$NotesPath" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Publish GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $TagName = $env:DTU_TAG
+          $Title = "DreamTexture for Unreal $env:DTU_VERSION"
+          $ZipPath = $env:DTU_ZIP
+          $NotesPath = $env:DTU_NOTES
+          $IsPrerelease = ($env:DTU_PRERELEASE -eq 'true') -or ('${{ github.event.inputs.prerelease }}' -eq 'true')
+          $ReleaseAssets = @($ZipPath)
+
+          $ReleaseArgs = @(
+            $TagName
+          ) + $ReleaseAssets + @(
+            '--title', $Title,
+            '--notes-file', $NotesPath
+          )
+
+          if ($IsPrerelease) {
+            $ReleaseArgs += '--prerelease'
+          }
+
+          gh release view $TagName *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $TagName @ReleaseAssets --clobber
+            gh release edit $TagName --title $Title --notes-file $NotesPath
+            if ($IsPrerelease) {
+              gh release edit $TagName --prerelease
+            }
+          } else {
+            if ('${{ github.ref_type }}' -ne 'tag') {
+              $ReleaseArgs += @('--target', '${{ github.sha }}')
+            }
+            gh release create @ReleaseArgs
+          }

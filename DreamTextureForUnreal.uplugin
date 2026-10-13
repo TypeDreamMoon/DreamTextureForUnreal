@@ -1,0 +1,42 @@
+{
+	"FileVersion": 3,
+	"Version": 90,
+	"VersionName": "0.9.0",
+	"FriendlyName": "DreamTexture for Unreal",
+	"Description": "Use DreamTexture PBR material sets in the Unreal Editor: browse the library, import sets as textures and a material instance, assign them to selected objects, generate new sets, and send existing project materials to the backend to fill in missing channels or restyle them. Needs a running DreamTexture backend.",
+	"Category": "DreamPlugin",
+	"CreatedBy": "TypeDreamMoon",
+	"Copyright": "Copyright (c) 2026 TypeDreamMoon",
+	"CreatedByURL": "https://github.com/TypeDreamMoon",
+	"DocsURL": "https://github.com/TypeDreamMoon/DreamTextureForUnreal/tree/master/Docs",
+	"MarketplaceURL": "",
+	"SupportURL": "https://github.com/TypeDreamMoon/DreamTextureForUnreal/issues",
+	"EngineVersion": "5.8.0",
+	"CanContainContent": true,
+	"IsBetaVersion": true,
+	"IsExperimentalVersion": false,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "DreamTextureClient",
+			"Type": "Editor",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "DreamTextureAssets",
+			"Type": "Editor",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "DreamTextureEditor",
+			"Type": "Editor",
+			"LoadingPhase": "Default"
+		}
+	],
+	"LocalizationTargets": [
+		{
+			"Name": "DreamTextureForUnreal",
+			"LoadingPolicy": "Editor"
+		}
+	]
+}
