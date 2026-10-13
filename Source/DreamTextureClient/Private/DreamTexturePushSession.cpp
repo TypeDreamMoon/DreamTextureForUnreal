@@ -94,8 +94,8 @@ FDreamTexturePushSession::FHooks FDreamTexturePushSession::FHooks::MakeDefault()
 	FHooks Out;
 	Out.Send = [](const FString& Verb, const FString& Path, const FString& JsonBody, float TimeoutSecs, FOnReply Done)
 	{
-		// 编辑器退出时模块是一个个关的，注销请求发出那一刻 HTTP 模块还在（它是本模块的依赖，关得比我们晚）。
-		// 万一不在，别在关闭途中把它重新加载起来。
+		// 编辑器退出时模块是一个个关的。注销请求发出那一刻 HTTP 模块还在：DreamTextureClient 启动时先加载了它，
+		// 所以它比我们晚卸载（Build.cs 里的依赖不管卸载顺序）。万一不在，别在关闭途中把它重新加载起来。
 		if (!FModuleManager::Get().IsModuleLoaded(TEXT("HTTP")))
 		{
 			FDreamTextureSessionReply Reply;

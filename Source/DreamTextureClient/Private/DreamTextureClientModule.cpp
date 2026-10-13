@@ -30,6 +30,19 @@ bool FDreamTextureClientModule::IsAvailable()
 
 void FDreamTextureClientModule::StartupModule()
 {
+	/*
+	 * 先把 WebSockets 与 HTTP 两个模块加载起来，再做别的。
+	 *
+	 * 编辑器退出时按「加载顺序」倒着卸载模块，而一个模块的加载顺序是在它的 StartupModule 返回之后才登记的
+	 * （引擎 ModuleManager.cpp 的 LoadModuleWithFailureReason）：在这里加载的模块排在本模块前面，退出时比我们晚关。
+	 * Build.cs 里写了依赖并不管这个顺序。不在这里加载的话，它们要等第一次拨号 / 第一个请求（下一帧以后）才被拉起来，
+	 * 排到了我们后面，退出时先被卸掉——ShutdownModule 里关长连接，FLwsWebSocket::Close() 再去取 FWebSocketsModule，
+	 * 等于在关闭途中重新加载一个已卸载的模块，断言崩溃（!ModuleInfo->bWasUnloadedAtShutdown）。
+	 * 宿主工程里别的插件先加载了 WebSockets，所以一直没复现；只装了本插件的工程里一退出就崩。
+	 */
+	FModuleManager::Get().LoadModuleChecked(TEXT("WebSockets"));
+	FModuleManager::Get().LoadModuleChecked(TEXT("HTTP"));
+
 	// MakeShared 而不是 new：FDreamTextureConnection 继承 TSharedFromThis，
 	// 它在异步回调里靠 AsWeak() 保命，必须先被共享指针持有才行。
 	Connection = MakeShared<FDreamTextureConnection>();

@@ -6,12 +6,14 @@
 #include "DreamTextureSettings.h"
 
 #include "Containers/Ticker.h"
+#include "CoreGlobals.h"
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
 #include "HttpModule.h"
 #include "IWebSocket.h"
 #include "Interfaces/IHttpRequest.h"
 #include "Interfaces/IHttpResponse.h"
+#include "Modules/ModuleManager.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 #include "WebSocketsModule.h"
@@ -636,9 +638,28 @@ void FDreamTextureConnection::CloseSocket()
 	Old->OnClosed().Clear();
 	Old->OnMessage().Clear();
 
+	// WebSockets 模块已经卸载（只会发生在编辑器退出途中）：它卸载时已经把所有连接收掉了。
+	// 这时再 Close()，引擎会去取 FWebSocketsModule，把已卸载的模块重新加载，断言崩溃。
+	// 正常情况下本模块启动时先加载了 WebSockets，它比我们晚卸载，走不到这里；这是兜底。
+	// 最后这份引用也不放：析构函数要求连接已经关掉，而管理器已经不在了，没人能保证这一点。
+	// 进程马上就退出，故意漏掉这一个对象比在退出途中赌一次析构稳妥。
+	if (!FModuleManager::Get().IsModuleLoaded(TEXT("WebSockets")))
+	{
+		new TSharedPtr<IWebSocket>(MoveTemp(Old));
+		return;
+	}
+
 	// 不判 IsConnected()：握手还没完成的时候它是 false，而卡在握手上的连接
 	// 恰恰是最需要主动掐掉的那种。各平台的实现对重复 Close 都是幂等的。
 	Old->Close();
+
+	// 编辑器退出途中不会再有下一帧：挂到 ticker 上的那份引用要等到静态析构才放，
+	// 那时 WebSockets 模块早关了。这里不在 socket 自己的广播里（是模块关闭调进来的），当场放掉；
+	// 管理器自己还持有一份，关闭流程照常在它那边走完。
+	if (IsEngineExitRequested())
+	{
+		return;
+	}
 
 	/*
 	 * 最后一份强引用挂到下一帧再放。
