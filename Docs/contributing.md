@@ -226,6 +226,15 @@ carries a comment as well. Each entry is the trap, then what happens, then what 
 - **Connecting to a local port nobody listens on takes about 2 seconds to be refused on Windows**, not zero. A health probe timeout shorter than that reports a live backend as down.
 - **`FPaths::ProjectDir()` is a relative path in the editor.** Make it absolute before building paths for `RelativeToGameDir`.
 - **Module shutdown must not touch UObjects, the settings CDO included.** In a GUI editor the plugin module shuts down after the UObject system, and `GetDefault<>()` returns a dangling pointer; the push session crashed that way on exit. Cache what shutdown needs while running. The automation editor shuts down in another order and cannot show this: check with *File ▸ Exit* in a GUI editor.
+- **A module you first use after your own startup is unloaded before you.** Modules unload in reverse load order, and a
+  module's place in that order is recorded when its `StartupModule` returns, so modules loaded *inside* your
+  `StartupModule` unload after you, and modules first loaded later (on the first request, the next frame) unload before
+  you. A `Build.cs` dependency does not change this. If the shutdown path then calls into such a module, the engine tries
+  to load it again and asserts (`!ModuleInfo->bWasUnloadedAtShutdown`). `FLwsWebSocket::Close()` does exactly that via
+  `FWebSocketsModule::Get()`, which crashed the editor on exit. Load every module the shutdown path needs in
+  `StartupModule` (Client loads `WebSockets` and `HTTP` first). The stock Launcher editor hides the problem because the
+  default-enabled `OnlineSubsystem` plugin loads `HTTP`, `XMPP` and through it `WebSockets` early; see *Before a release*
+  for how to reproduce a project without it.
 - **`TMap<FString, TUniquePtr<T>>` inside an exported class (`*_API`) does not compile**, because the compiler instantiates the implicit copy. Delete the copy constructor explicitly. A nested struct in an exported class needs its own `*_API` when a default argument refers to its static functions, otherwise LNK2019, since default arguments are evaluated in the caller's module.
 - **`FSlateDynamicImageBrush` is a `struct`.** Forward declaring it as `class` gives C4099, which is an error here.
 - **The `Settings` module can only be referenced with `PrivateIncludePathModuleNames`**; UnrealEd does not re-export it. Persisting default config uses `UObject::TryUpdateDefaultConfigFile()`.
@@ -305,6 +314,15 @@ Also needed, since incremental builds hide it:
 
 - Check exit from a GUI editor with *File ▸ Exit*. Code on the module shutdown path must not touch UObjects (including
   the settings CDO): the automation editor shuts down in another order and cannot show it.
+- Check it once more as a project without `OnlineSubsystem`'s early module loads, connected to a backend, so that
+  `WebSockets` is first loaded by this plugin:
+
+  ```powershell
+  UnrealEditor.exe <Host>.uproject "-ini:Engine:[OnlineSubsystem]:AdditionalModulesToLoad=HTTP" "-LogCmds=LogModuleManager Verbose"
+  ```
+
+  On exit the log must show `Shutting down and abandoning module DreamTextureClient` before `... WebSockets`, and no
+  assertion.
 - Check the interface in Chinese as well as English (see Localization).
 
 ## Localization

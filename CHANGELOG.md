@@ -1,5 +1,15 @@
 # DreamTexture for Unreal ChangeLog
 
+## Unreleased
+
+### Fixed
+
+- **Closing the editor could crash while closing the event stream.** In a project where nothing else loads the
+  `WebSockets` module early (the stock Launcher editor does, through the default `OnlineSubsystem` plugin), it was first
+  loaded by this plugin's event stream, so it was unloaded before the plugin; closing the stream on shutdown then tried
+  to load it again and hit an engine assertion. The plugin now loads `WebSockets` and `HTTP` when it starts, so they are
+  unloaded after it, and never touches an unloaded `WebSockets` module.
+
 ## 0.9.0 - 2026-10-13
 
 First public release. It is a beta: the behavior below is tested, but interfaces and generated asset layout may still change before 1.0.
