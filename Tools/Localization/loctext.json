@@ -5600,7 +5600,7 @@
  {
   "ns": "UObjectToolTips",
   "key": "DreamTextureSettings:StaleAfterMs",
-  "src": "How long without receiving any message before the connection is considered dead, in milliseconds. The backend sends a heartbeat text frame every 15 seconds (HeartbeatInterval in internal/api/websocket.go). The default of 40000 is the same value as STALE_AFTER in the web UI: a little more than two beats of margin, so a short scheduling stall does not cut a good connection. Before changing it, read the comment in web/src/store.ts: both sides must be changed together.",
+  "src": "How long without receiving any message before the connection is considered dead, in milliseconds. The backend sends a heartbeat text frame every 15 seconds (HeartbeatInterval in internal/api/websocket.go). The default of 40000 is the same value as STALE_AFTER in the web UI: a little more than two beats of margin, so a short scheduling stall does not cut a good connection. Before changing it, read the comment above STALE_AFTER in web/src/store.ts of the DreamTextureDesktop repository: both sides must be changed together.",
   "file": "Source/DreamTextureClient/Public/DreamTextureSettings.h"
  },
  {

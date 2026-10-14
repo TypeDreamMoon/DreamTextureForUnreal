@@ -43,7 +43,7 @@ struct DREAMTEXTURECLIENT_API FDreamTextureBackendTarget
 	/**
 	 * 拉起后等它应答的时限（秒）。
 	 *
-	 * 90 秒与后端桌面外壳的 STARTUP_TIMEOUT 一致（src-tauri/src/main.rs）：后端冷启动要建 SQLite、
+	 * 90 秒与桌面外壳的 STARTUP_TIMEOUT 一致（DreamTextureDesktop 仓库的 src-tauri/src/main.rs）：后端冷启动要建 SQLite、
 	 * 载工作流，托管模式下还要等 ComfyUI 起来之前的那一段，机器忙的时候不止几秒。
 	 */
 	float StartupTimeoutSecs = 90.0f;
@@ -55,7 +55,7 @@ struct DREAMTEXTURECLIENT_API FDreamTextureBackendTarget
 /**
  * 后端进程托管：「确保后端在」。
  *
- * 做的事和后端桌面外壳（后端仓库 https://github.com/TypeDreamMoon/DreamTexture 的 src-tauri）一样，规矩也一样：
+ * 做的事和桌面外壳（https://github.com/TypeDreamMoon/DreamTextureDesktop 的 src-tauri）一样，规矩也一样：
  *
  * 1. **先看端口**：GET /api/health 应答 2xx 就直接附着，不启动、也不记在自己名下。
  * 2. 没人应答、且配了可执行文件，才 CreateProc 拉起来，轮询 /api/health 等它应答。

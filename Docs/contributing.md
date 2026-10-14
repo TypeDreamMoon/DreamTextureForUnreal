@@ -72,8 +72,8 @@ are fixed on both sides; do not invent a second set. If one has to change, chang
 | Item | Value |
 | :-- | :-- |
 | Event stream heartbeat | The backend sends a `{"type":"hb"}` text frame every 15 seconds (`HeartbeatInterval` in `internal/api/websocket.go`). |
-| Stale detection | 40 000 ms without any message means *Timed out* (`STALE_AFTER` in `web/src/store.ts`). The watchdog watches **messages**, not the close event: a half-dead connection never fires one. |
-| Reconnect backoff | Starts at 1000 ms, doubles, capped at 15 000 ms, reset once connected (`connectEvents()` in `web/src/store.ts`). |
+| Stale detection | 40 000 ms without any message means *Timed out* (`STALE_AFTER` in `web/src/store.ts` of [DreamTextureDesktop](https://github.com/TypeDreamMoon/DreamTextureDesktop)). The watchdog watches **messages**, not the close event: a half-dead connection never fires one. |
+| Reconnect backoff | Starts at 1000 ms, doubles, capped at 15 000 ms, reset once connected (`connectEvents()` in the same file). |
 | Material format | `docs/manifest-v1.md` in the backend repository. Frozen. |
 | `sha256` in a manifest | The SHA-256 of the **whole file**, as lowercase hex, **first 16 characters** (`internal/material/manifest.go`). |
 | Normals | Manifests state `y: directx`; both pipelines are already normalized to it. The green channel is flipped only when `y` is `opengl`, which the backend has not produced so far. |

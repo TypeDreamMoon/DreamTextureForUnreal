@@ -18,7 +18,7 @@ class FJsonObject;
  *   生成请求     internal/job/runner.go 的 Request / Submit / resolveSeed
  *   任务         internal/store/store.go 的 Job、internal/job/events.go
  *   扩写         internal/api/refine.go
- * Web 端的参照实现是 web/src/views/GenerateView.vue。
+ * Web 端的参照实现是 DreamTextureDesktop 仓库（https://github.com/TypeDreamMoon/DreamTextureDesktop）的 web/src/views/GenerateView.vue。
  *
  * 解析一律容忍 null 与缺字段：Go 的 nil 切片序列化成 null 而不是 []，后端仓库里这个坑踩过两次。
  */

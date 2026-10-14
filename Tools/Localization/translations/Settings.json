@@ -20,7 +20,7 @@
   "UObjectToolTips|DreamTextureSettings:ImportRoot": "导入落地的内容根目录。",
   "UObjectToolTips|DreamTextureSettings:ReconnectBaseMs": "断线重连的起始退避（毫秒）。每次翻倍，上限是「重连退避上限（毫秒）」，连上后复位。",
   "UObjectToolTips|DreamTextureSettings:ReconnectMaxMs": "重连退避的上限（毫秒）。",
-  "UObjectToolTips|DreamTextureSettings:StaleAfterMs": "多久没收到任何消息就判定这条连接死了（毫秒）。后端每 15 秒发一个心跳文本帧（internal/api/websocket.go 的 HeartbeatInterval）。默认 40000 与 Web 端的 STALE_AFTER 是同一个值：两拍多一点的余量，短暂的调度停顿不该掐掉一条好连接。改之前先去看 web/src/store.ts 上那段注释，两边要一起改。",
+  "UObjectToolTips|DreamTextureSettings:StaleAfterMs": "多久没收到任何消息就判定这条连接死了（毫秒）。后端每 15 秒发一个心跳文本帧（internal/api/websocket.go 的 HeartbeatInterval）。默认 40000 与 Web 端的 STALE_AFTER 是同一个值：两拍多一点的余量，短暂的调度停顿不该掐掉一条好连接。改之前先去看 DreamTextureDesktop 仓库 web/src/store.ts 里 STALE_AFTER 上那段注释，两边要一起改。",
   "UObjectToolTips|DreamTextureSettings:bAutoImportGenerated": "生成页提交的变体完成后自动导入工程（走和素材库「导入」按钮同一条路径）。默认关：一次出几个变体是为了挑，全导进工程会留下一堆不要的资产。只在完成的那一刻看这个开关，不追认：关着时完成的变体，事后打开开关不会被补导。",
   "UObjectToolTips|DreamTextureSettings:bAutoStartBackend": "编辑器启动时，若上面配了后端可执行文件且地址上还没有后端在应答，就自动把它拉起来。默认关：后端的 ComfyUI 会占显存，而编辑器本身也吃显存，用户没打算出图时不该替他开。关着时后端也会在需要它的时候（点「启动后端」、生成页出图）按需拉起。",
   "UObjectToolTips|DreamTextureSettings:bCreateMaterialInstance": "导入后自动建（或更新）材质实例 MI_<名字>，父材质是插件生成在导入根目录下的母材质 M_DreamTexture_Master。关掉就只落贴图。",

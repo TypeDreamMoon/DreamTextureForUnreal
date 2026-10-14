@@ -67,9 +67,9 @@ public:
 	 * HeartbeatInterval）。默认 40000 与 Web 端的 STALE_AFTER 是同一个值：
 	 * 两拍多一点的余量，短暂的调度停顿不该掐掉一条好连接。
 	 *
-	 * 改之前先去看 web/src/store.ts 上那段注释，两边要一起改。
+	 * 改之前先去看 DreamTextureDesktop 仓库 web/src/store.ts 里 STALE_AFTER 上那段注释，两边要一起改。
 	 */
-	UPROPERTY(EditAnywhere, config, AdvancedDisplay, Category = "Connection", meta = (DisplayName = "Stale After (ms)", ClampMin = "5000", ToolTip = "How long without receiving any message before the connection is considered dead, in milliseconds. The backend sends a heartbeat text frame every 15 seconds (HeartbeatInterval in internal/api/websocket.go). The default of 40000 is the same value as STALE_AFTER in the web UI: a little more than two beats of margin, so a short scheduling stall does not cut a good connection. Before changing it, read the comment in web/src/store.ts: both sides must be changed together."))
+	UPROPERTY(EditAnywhere, config, AdvancedDisplay, Category = "Connection", meta = (DisplayName = "Stale After (ms)", ClampMin = "5000", ToolTip = "How long without receiving any message before the connection is considered dead, in milliseconds. The backend sends a heartbeat text frame every 15 seconds (HeartbeatInterval in internal/api/websocket.go). The default of 40000 is the same value as STALE_AFTER in the web UI: a little more than two beats of margin, so a short scheduling stall does not cut a good connection. Before changing it, read the comment above STALE_AFTER in web/src/store.ts of the DreamTextureDesktop repository: both sides must be changed together."))
 	int32 StaleAfterMs;
 
 	/** 导入落地的内容根目录。 */

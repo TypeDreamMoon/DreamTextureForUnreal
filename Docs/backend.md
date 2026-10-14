@@ -22,7 +22,7 @@ go build -o dreamtexture.exe ./cmd/dreamtexture
 Open <http://127.0.0.1:8777>. The backend starts even when ComfyUI is not installed or not running, so the
 web UI is there to help you set it up.
 
-The repository also has a Tauri desktop shell (`src-tauri/`) that wraps the same web UI in a native window.
+The web UI's source and a Windows desktop app (a Tauri shell that wraps the same web UI in a native window and ships the backend with it) are in a separate repository, [DreamTextureDesktop](https://github.com/TypeDreamMoon/DreamTextureDesktop). The backend repository carries a prebuilt copy of the web UI, so the backend exe alone still serves it.
 The plugin does not care which one you use. If a backend is already answering on the configured address, the
 plugin attaches to it.
 
